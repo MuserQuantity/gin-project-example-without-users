@@ -4,25 +4,28 @@ WORKDIR /go/src/github.com/MuserQuantity/gin-project-example-without-users
 
 ENV GOPROXY=https://goproxy.cn,direct
 
-COPY . .
+COPY ./go.mod ./go.mod
+COPY ./go.sum ./go.sum
 
 RUN go env -w GO111MODULE=on \
     && go env -w GOPROXY=https://goproxy.cn,direct \
     && go env -w CGO_ENABLED=0
+RUN go mod download -x
 
-# Timezone
-RUN sed -i 's/dl-cdn.alpinelinux.org/mirrors.aliyun.com/g' /etc/apk/repositories
-RUN apk add -U tzdata
-
+COPY . .
+RUN go mod vendor
 RUN go build -o main ./main.go
 
 # Final image
 FROM alpine:latest
 WORKDIR /root
-ENV TZ=Asia/Shanghai
 # Main App
 COPY --from=build-env /go/src/github.com/MuserQuantity/gin-project-example-without-users/main /usr/bin/main
-COPY --from=build-env /usr/share/zoneinfo/Asia/Shanghai /etc/localtime
+# Timezone
+RUN sed -i 's/dl-cdn.alpinelinux.org/mirrors.aliyun.com/g' /etc/apk/repositories
+RUN apk add -U tzdata
+ENV TZ=Asia/Shanghai
+RUN cp /usr/share/zoneinfo/Asia/Shanghai /etc/localtime
 
 EXPOSE 8899
 
